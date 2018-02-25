@@ -7,6 +7,7 @@ import scala.io._
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.google.api.core.ApiFuture
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.{FirebaseApp, FirebaseOptions}
@@ -96,6 +97,7 @@ object Main extends App {
     } )
 
     // connect to firebase
+    println( "Connecting to firebase" );
     val serviceAccount = new FileInputStream("serviceAccount.json")
     val options = new FirebaseOptions.Builder()
       .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -106,14 +108,18 @@ object Main extends App {
     // work relative to the provided user directory
     val pathUserDir = "/users/" + userId
     val refUserDir = FirebaseDatabase.getInstance( FirebaseApp.getInstance() ).getReference( pathUserDir )
+    println( "Writing to " + pathUserDir );
+
+    var work = List[ApiFuture[Void]]()
 
     // write characters to firebase and take note of generated ids
     val refCharacters = refUserDir.child("characters")
     val characterMappings = prefs.map( pref => {
       val charRef = refCharacters.push()
-      charRef.setValueAsync( pref )
+      work = charRef.setValueAsync(pref) :: work
       (pref.name,charRef.getKey)
     }).toMap
+    println( "Wrote " + characterMappings.size + " characters" );
 
     // write results to firebase using the new character ids
     val refResults = refUserDir.child("results")
@@ -127,7 +133,12 @@ object Main extends App {
       val p1Won = playerIds.head == oldResult.winnerId
       val result = new FirebaseResult( newDate, p1CharId, p2CharId, p1Won )
       val resultRef = refResults.push()
-      resultRef.setValueAsync(result)
+      work = resultRef.setValueAsync(result) :: work
     } )
+    println( "Wrote " + parsedJson.results.size + " results" );
+
+    println( "Waiting for writes to finish")
+    work.foreach( future => { future.get()} )
+    println( "Done" )
   }
 }
