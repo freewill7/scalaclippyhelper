@@ -48,8 +48,10 @@ class FirebasePref(@BeanProperty val name : String, @BeanProperty val p1Rating :
 // Represents a result
 // The @BeanProperty annotation is required for FirebaseDatabase serialisation
 class FirebaseResult( @BeanProperty val date: String,
-                      @BeanProperty val p1Character: String,
-                      @BeanProperty val p2Character : String,
+                      @BeanProperty val p1Id: String,
+                      @BeanProperty val p1Name : String,
+                      @BeanProperty val p2Id : String,
+                      @BeanProperty val p2Name : String,
                       @BeanProperty val p1Won : Boolean ) {
 }
 
@@ -129,9 +131,11 @@ object Main extends App {
       val oldDate = oldResult.date
       val newDate = newDateFormat.format( oldDateFormat.parse(oldDate) )
       val p1CharId = characterMappings(oldResult.p1Character)
+      val p1CharName = oldResult.p1Character
       val p2CharId = characterMappings(oldResult.p2Character)
+      val p2CharName = oldResult.p2Character
       val p1Won = playerIds.head == oldResult.winnerId
-      val result = new FirebaseResult( newDate, p1CharId, p2CharId, p1Won )
+      val result = new FirebaseResult( newDate, p1CharId, p1CharName, p2CharId, p2CharName, p1Won )
       val resultRef = refResults.push()
       work = resultRef.setValueAsync(result) :: work
     } )
